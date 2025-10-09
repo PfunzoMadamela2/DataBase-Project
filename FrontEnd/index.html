@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+        }
+
+        h2 {
+            color: #444;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+
+        /* Status Messages */
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        /* Login Section */
+        #login-section {
+            text-align: center;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        #login-section h2 {
+            text-align: center;
+            border: none;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        button {
+            padding: 15px 25px;
+            margin: 10px 5px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .login-btn {
+            background: #007bff;
+            color: white;
+            width: 100%;
+        }
+
+        .login-btn:hover {
+            background: #0056b3;
+        }
+
+        .add-btn {
+            background: #28a745;
+            color: white;
+        }
+
+        .add-btn:hover {
+            background: #218838;
+        }
+
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
+
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+            padding: 8px 15px;
+            font-size: 14px;
+            border-radius: 5px;
+        }
+
+        .demo-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        /* App Section */
+        #app-section {
+            display: none;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        /* Add Expense Form */
+        .form-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr 2fr auto;
+            gap: 15px;
+            align-items: end;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        /* Summary Section */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .summary-card {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border-left: 4px solid #007bff;
+        }
+
+        .total-amount {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #28a745;
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .category-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .category-item:last-child {
+            border-bottom: none;
+        }
+
+        /* Expense Table */
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        th {
+            background: #007bff;
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Loading Spinner */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .form-group {
+                grid-template-columns: 1fr;
+            }
+            
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .container {
+                margin: 10px;
+                padding: 20px;
+            }
+            
+            table {
+                font-size: 14px;
+            }
+            
+            th, td {
+                padding: 10px 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💰 Expense Tracker</h1>
+
+        <!-- Connection Status -->
+        <div id="connection-status" class="status warning">
+             Checking server connection...
+        </div>
+
+        <!-- Login Section -->
+        <div id="login-section">
+            <h2>Welcome Back</h2>
+            <input type="password" id="password" placeholder="Enter password (admin123)" value="admin123">
+            <button class="login-btn" onclick="login()">Login</button>
+            <p id="login-message" style="text-align: center; margin: 15px 0; min-height: 20px;"></p>
+            
+            <div class="demo-info">
+                <strong>Demo Information:</strong><br>
+                Password: <code>admin123</code><br>
+                Make sure the backend server is running on port 5000
+            </div>
+        </div>
+
+        <!-- App Section -->
+        <div id="app-section">
+            <div class="header">
+                <h2 style="margin: 0; border: none;">Expense Dashboard</h2>
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+
+            <!-- Add Expense Form -->
+            <div class="form-group">
+                <input type="text" id="category" placeholder="Category (e.g., Food)" list="categories">
+                <datalist id="categories">
+                    <option value="Food">
+                    <option value="Transport">
+                    <option value="Entertainment">
+                    <option value="Utilities">
+                    <option value="Shopping">
+                    <option value="Healthcare">
+                    <option value="Other">
+                </datalist>
+                <input type="number" id="amount" placeholder="Amount" step="0.01" min="0">
+                <input type="text" id="description" placeholder="Description (optional)">
+                <button class="add-btn" onclick="addExpense()">Add Expense</button>
+            </div>
+
+            <!-- Summary Section -->
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <h3>Total Spent</h3>
+                    <div class="total-amount" id="total-amount">$0.00</div>
+                    <p style="text-align: center; color: #666; margin: 0;">All expenses</p>
+                </div>
+                <div class="summary-card">
+                    <h3>Spending by Category</h3>
+                    <div id="category-breakdown">
+                        <div class="no-data">No expenses yet</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Expense List -->
+            <h2>Recent Expenses</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Category</th>
+                            <th>Amount</th>
+                            <th>Description</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="expense-table">
+                        <tr>
+                            <td colspan="5" class="no-data">No expenses found. Add your first expense above!</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:5000";
+        let authToken = "logged-in"; // Simple authentication for demo
+
+        // Check server connection on page load
+        async function checkServerConnection() {
+            const statusElement = document.getElementById('connection-status');
+            
+            try {
+                const response = await fetch(`${API_URL}/test`);
+                if (response.ok) {
+                    const data = await response.json();
+                    statusElement.innerHTML = `<div class="status connected"> Connected to server! Database: ${data.database}</div>`;
+                    console.log(' Server is connected:', data);
+                } else {
+                    statusElement.innerHTML = '<div class="status error"> Server error. Please check backend.</div>';
+                }
+            } catch (error) {
+                statusElement.innerHTML = `
+                    <div class="status error">
+                         Cannot connect to server at ${API_URL}
+                        <br><small>Please make sure the backend server is running on port 5000</small>
+                    </div>
+                `;
+                console.error(' Server connection failed:', error);
+            }
+        }
+
+        // Login function
+        async function login() {
+            const password = document.getElementById("password").value;
+            const messageElement = document.getElementById("login-message");
+            
+            // Show loading
+            messageElement.textContent = " Logging in...";
+            messageElement.style.color = "#007bff";
+
+            try {
+                const response = await fetch(`${API_URL}/login`, {
+                    method: "POST",
+                    headers: { 
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ password })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    messageElement.textContent = " Login successful! Loading expenses...";
+                    messageElement.style.color = "green";
+                    
+                    // Show app section
+                    document.getElementById("login-section").style.display = "none";
+                    document.getElementById("app-section").style.display = "block";
+                    
+                    // Load expenses and summary
+                    await loadExpenses();
+                    await loadSummary();
+                    
+                } else {
+                    messageElement.textContent = " " + (data.message || "Login failed");
+                    messageElement.style.color = "red";
+                }
+            } catch (error) {
+                console.error("Login error:", error);
+                messageElement.innerHTML = " Network error. Please check if server is running.";
+                messageElement.style.color = "red";
+            }
+        }
+
+        // Add new expense
+        async function addExpense() {
+            const category = document.getElementById("category").value.trim();
+            const amount = document.getElementById("amount").value;
+            const description = document.getElementById("description").value.trim();
+
+            if (!category || !amount) {
+                alert("Please fill in both category and amount");
+                return;
+            }
+
+            const addBtn = document.querySelector('.add-btn');
+            const originalText = addBtn.textContent;
+            addBtn.innerHTML = '<div class="loading"></div> Adding...';
+            addBtn.disabled = true;
+
+            try {
+                const response = await fetch(`${API_URL}/add-expense`, {
+                    method: "POST",
+                    headers: { 
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ category, amount, description })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Clear form
+                    document.getElementById("category").value = "";
+                    document.getElementById("amount").value = "";
+                    document.getElementById("description").value = "";
+                    
+                    // Refresh data
+                    await loadExpenses();
+                    await loadSummary();
+                    
+                    console.log(" Expense added successfully:", data);
+                } else {
+                    alert("Error: " + data.message);
+                }
+            } catch (error) {
+                console.error("Add expense error:", error);
+                alert("Failed to add expense. Check console for details.");
+            } finally {
+                addBtn.textContent = originalText;
+                addBtn.disabled = false;
+            }
+        }
+
+        // Load expenses from server
+        async function loadExpenses() {
+            const table = document.getElementById("expense-table");
+            table.innerHTML = '<tr><td colspan="5" class="no-data"><div class="loading"></div> Loading expenses...</td></tr>';
+
+            try {
+                const response = await fetch(`${API_URL}/expenses`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const expenses = await response.json();
+                
+                if (expenses.length === 0) {
+                    table.innerHTML = '<tr><td colspan="5" class="no-data">No expenses found. Add your first expense above!</td></tr>';
+                    return;
+                }
+
+                table.innerHTML = expenses.map(expense => `
+                    <tr>
+                        <td>${new Date(expense.date).toLocaleDateString()}</td>
+                        <td>${expense.category}</td>
+                        <td>R${parseFloat(expense.amount).toFixed(2)}</td>
+                        <td>${expense.description || '-'}</td>
+                        <td>
+                            <button class="delete-btn" onclick="deleteExpense(${expense.id})">Delete</button>
+                        </td>
+                    </tr>
+                `).join('');
+
+                console.log(` Loaded ${expenses.length} expenses`);
+                
+            } catch (error) {
+                console.error("Load expenses error:", error);
+                table.innerHTML = '<tr><td colspan="5" class="no-data" style="color: red;">Error loading expenses. Check console.</td></tr>';
+            }
+        }
+
+        // Load expense summary
+        async function loadSummary() {
+            try {
+                const response = await fetch(`${API_URL}/expenses/summary`);
+                const data = await response.json();
+                
+                // Update total amount
+                const totalAmount = parseFloat(data.grandTotal || 0).toFixed(2);
+                document.getElementById("total-amount").textContent = `R${totalAmount}`;
+                
+                // Update category breakdown
+                const breakdown = document.getElementById("category-breakdown");
+                if (data.byCategory && data.byCategory.length > 0) {
+                    breakdown.innerHTML = data.byCategory.map(cat => `
+                        <div class="category-item">
+                            <span><strong>${cat.category}</strong></span>
+                            <span>R${parseFloat(cat.total_amount).toFixed(2)}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    breakdown.innerHTML = '<div class="no-data">No expenses yet</div>';
+                }
+                
+            } catch (error) {
+                console.error("Load summary error:", error);
+            }
+        }
+
+        // Delete expense
+        async function deleteExpense(expenseId) {
+            if (!confirm("Are you sure you want to delete this expense?")) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/expenses/${expenseId}`, {
+                    method: "DELETE"
+                });
+
+                if (response.ok) {
+                    await loadExpenses();
+                    await loadSummary();
+                } else {
+                    const data = await response.json();
+                    alert("Error: " + data.message);
+                }
+            } catch (error) {
+                console.error("Delete expense error:", error);
+                alert("Failed to delete expense");
+            }
+        }
+
+        // Logout function
+        function logout() {
+            document.getElementById("app-section").style.display = "none";
+            document.getElementById("login-section").style.display = "block";
+            document.getElementById("password").value = "admin123";
+            document.getElementById("login-message").textContent = "";
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log(" Expense Tracker Frontend Initialized");
+            console.log(" API URL:", API_URL);
+            
+            // Check server connection
+            checkServerConnection();
+            
+            // Add enter key support for login
+            document.getElementById("password").addEventListener("keypress", function(event) {
+                if (event.key === "Enter") {
+                    login();
+                }
+            });
+            
+            // Add enter key support for expense form
+            document.getElementById("amount").addEventListener("keypress", function(event) {
+                if (event.key === "Enter") {
+                    addExpense();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
