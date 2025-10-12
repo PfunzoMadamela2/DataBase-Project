@@ -10,6 +10,9 @@ body {
   min-height: 100vh;
   padding: 20px;
 }
+.status.hidden {
+    display: none;
+}
 
 .container {
   max-width: 1200px;
