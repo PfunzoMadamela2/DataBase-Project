@@ -41,19 +41,19 @@ let db;
 async function initializeDatabase() {
   try {
     db = await mysql.createConnection(dbConfig);
-    console.log('✅ Connected to MySQL database!');
+    console.log(' Connected to MySQL database!');
     
     // Create or update tables
     await createOrUpdateTables();
     
   } catch (error) {
-    console.error('❌ Database connection failed:', error.message);
+    console.error(' Database connection failed:', error.message);
     
     if (error.code === 'ER_BAD_DB_ERROR') {
-      console.log('📁 Database does not exist. Creating it...');
+      console.log(' Database does not exist. Creating it...');
       await createDatabase();
     } else if (error.code === 'ER_ACCESS_DENIED_ERROR') {
-      console.log('🔐 Access denied. Please check your MySQL credentials.');
+      console.log(' Access denied. Please check your MySQL credentials.');
     }
   }
 }
@@ -69,7 +69,7 @@ async function createDatabase() {
     });
     
     await tempDb.execute(`CREATE DATABASE IF NOT EXISTS ${dbConfig.database}`);
-    console.log(`✅ Database '${dbConfig.database}' created`);
+    console.log(` Database '${dbConfig.database}' created`);
     
     await tempDb.end();
     
@@ -80,7 +80,7 @@ async function createDatabase() {
     await createOrUpdateTables();
     
   } catch (error) {
-    console.error('❌ Failed to create database:', error.message);
+    console.error(' Failed to create database:', error.message);
     if (tempDb) await tempDb.end();
   }
 }
@@ -97,7 +97,7 @@ async function createOrUpdateTables() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    console.log('✅ Users table checked/created');
+    console.log(' Users table checked/created');
 
     // Check if expenses table exists and has user_id column
     const [tables] = await db.execute("SHOW TABLES LIKE 'expenses'");
@@ -107,11 +107,11 @@ async function createOrUpdateTables() {
       const [columns] = await db.execute("SHOW COLUMNS FROM expenses LIKE 'user_id'");
       
       if (columns.length === 0) {
-        console.log('🔄 Adding user_id column to expenses table...');
+        console.log(' Adding user_id column to expenses table...');
         
         // Drop the old expenses table and recreate it
         await db.execute('DROP TABLE expenses');
-        console.log('✅ Old expenses table dropped');
+        console.log(' Old expenses table dropped');
         
         // Create new expenses table with user_id
         await db.execute(`
@@ -125,9 +125,9 @@ async function createOrUpdateTables() {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           )
         `);
-        console.log('✅ New expenses table created with user_id');
+        console.log(' New expenses table created with user_id');
       } else {
-        console.log('✅ Expenses table already has user_id column');
+        console.log(' Expenses table already has user_id column');
       }
     } else {
       // Create expenses table for the first time
@@ -142,17 +142,17 @@ async function createOrUpdateTables() {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
-      console.log('✅ Expenses table created');
+      console.log(' Expenses table created');
     }
 
-    console.log('✅ All tables are ready!');
+    console.log(' All tables are ready!');
     
   } catch (error) {
-    console.error('❌ Table creation error:', error);
+    console.error(' Table creation error:', error);
     
     // If there's an error, try to create the tables from scratch
     try {
-      console.log('🔄 Attempting to recreate tables...');
+      console.log(' Attempting to recreate tables...');
       
       // Drop and recreate tables
       await db.execute('DROP TABLE IF EXISTS expenses');
@@ -182,10 +182,10 @@ async function createOrUpdateTables() {
         )
       `);
       
-      console.log('✅ Tables recreated successfully!');
+      console.log(' Tables recreated successfully!');
       
     } catch (recreateError) {
-      console.error('❌ Failed to recreate tables:', recreateError);
+      console.error(' Failed to recreate tables:', recreateError);
     }
   }
 }
@@ -193,7 +193,7 @@ async function createOrUpdateTables() {
 // Test endpoint
 app.get('/test', (req, res) => {
   res.json({ 
-    message: '✅ Backend server is working!', 
+    message: ' Backend server is working!', 
     timestamp: new Date().toISOString(),
     database: db ? 'Connected' : 'Disconnected'
   });
@@ -248,7 +248,7 @@ app.post('/register', async (req, res) => {
   let connection;
   try {
     const { username, email, password } = req.body;
-    console.log('📝 Registration attempt:', { username, email });
+    console.log(' Registration attempt:', { username, email });
     
     if (!username || !email || !password) {
       return res.status(400).json({ 
@@ -288,7 +288,7 @@ app.post('/register', async (req, res) => {
       [username, email, hashedPassword]
     );
     
-    console.log('✅ New user registered:', username);
+    console.log(' New user registered:', username);
     
     res.json({ 
       success: true,
@@ -297,7 +297,7 @@ app.post('/register', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ Registration error:', error);
+    console.error(' Registration error:', error);
     res.status(500).json({ 
       success: false, 
       message: "Registration failed. Please try again." 
@@ -312,7 +312,7 @@ app.post('/login', async (req, res) => {
   let connection;
   try {
     const { username, password } = req.body;
-    console.log('🔐 Login attempt for user:', username);
+    console.log(' Login attempt for user:', username);
     
     if (!username || !password) {
       return res.status(400).json({ 
@@ -348,7 +348,7 @@ app.post('/login', async (req, res) => {
       });
     }
     
-    console.log('✅ User logged in:', username);
+    console.log(' User logged in:', username);
     
     res.json({ 
       success: true,
@@ -361,7 +361,7 @@ app.post('/login', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ Login error:', error);
+    console.error(' Login error:', error);
     res.status(500).json({ 
       success: false, 
       message: "Login failed. Please try again." 
@@ -376,7 +376,7 @@ app.post('/add-expense', async (req, res) => {
   let connection;
   try {
     const { userId, category, amount, description } = req.body;
-    console.log('💰 Adding expense for user:', userId, { category, amount, description });
+    console.log(' Adding expense for user:', userId, { category, amount, description });
 
     if (!userId || !category || !amount) {
       return res.status(400).json({ 
@@ -390,7 +390,7 @@ app.post('/add-expense', async (req, res) => {
     const sql = "INSERT INTO expenses (user_id, category, amount, description) VALUES (?, ?, ?, ?)";
     const [result] = await connection.execute(sql, [userId, category, parseFloat(amount), description || '']);
     
-    console.log('✅ Expense added successfully, ID:', result.insertId);
+    console.log(' Expense added successfully, ID:', result.insertId);
     
     res.json({ 
       success: true,
@@ -398,7 +398,7 @@ app.post('/add-expense', async (req, res) => {
       id: result.insertId
     });
   } catch (error) {
-    console.error('❌ Add expense error:', error);
+    console.error(' Add expense error:', error);
     res.status(500).json({ 
       success: false,
       message: "Failed to add expense: " + error.message 
@@ -413,7 +413,7 @@ app.get('/expenses/:userId', async (req, res) => {
   let connection;
   try {
     const userId = req.params.userId;
-    console.log('📊 Fetching expenses for user:', userId);
+    console.log(' Fetching expenses for user:', userId);
     
     connection = await mysql.createConnection(dbConfig);
     
@@ -422,11 +422,11 @@ app.get('/expenses/:userId', async (req, res) => {
       [userId]
     );
     
-    console.log(`✅ Found ${results.length} expenses for user ${userId}`);
+    console.log(` Found ${results.length} expenses for user ${userId}`);
     
     res.json(results);
   } catch (error) {
-    console.error('❌ Get expenses error:', error);
+    console.error(' Get expenses error:', error);
     res.status(500).json({ 
       success: false,
       message: "Failed to fetch expenses: " + error.message 
@@ -460,7 +460,7 @@ app.get('/expenses/summary/:userId', async (req, res) => {
       [userId]
     );
     
-    console.log(`✅ Summary loaded for user ${userId}`);
+    console.log(` Summary loaded for user ${userId}`);
     
     res.json({
       success: true,
@@ -468,7 +468,7 @@ app.get('/expenses/summary/:userId', async (req, res) => {
       grandTotal: total[0].grand_total || 0
     });
   } catch (error) {
-    console.error('❌ Summary error:', error);
+    console.error(' Summary error:', error);
     res.status(500).json({ 
       success: false,
       message: "Failed to fetch summary: " + error.message 
@@ -498,14 +498,14 @@ app.delete('/expenses/:userId/:id', async (req, res) => {
       });
     }
     
-    console.log(`✅ Expense ${id} deleted for user ${userId}`);
+    console.log(`Expense ${id} deleted for user ${userId}`);
     
     res.json({ 
       success: true,
       message: 'Expense deleted successfully' 
     });
   } catch (error) {
-    console.error('❌ Delete expense error:', error);
+    console.error(' Delete expense error:', error);
     res.status(500).json({ 
       success: false,
       message: 'Failed to delete expense: ' + error.message 
@@ -520,12 +520,12 @@ const PORT = process.env.PORT || 5000;
 
 initializeDatabase().then(() => {
   app.listen(PORT, () => {
-    console.log(`\n🚀 BACKEND SERVER STARTED SUCCESSFULLY!`);
-    console.log(`📍 Server running on: http://localhost:${PORT}`);
-    console.log(`🧪 Test URL: http://localhost:${PORT}/test`);
-    console.log(`🔧 Debug schema: http://localhost:${PORT}/debug/schema`);
-    console.log(`❤️  Health check: http://localhost:${PORT}/health`);
+    console.log(`\n BACKEND SERVER STARTED SUCCESSFULLY!`);
+    console.log(` Server running on: http://localhost:${PORT}`);
+    console.log(` Test URL: http://localhost:${PORT}/test`);
+    console.log(` Debug schema: http://localhost:${PORT}/debug/schema`);
+    console.log(`  Health check: http://localhost:${PORT}/health`);
   });
 }).catch(error => {
-  console.error('❌ Failed to initialize database:', error);
+  console.error(' Failed to initialize database:', error);
 });
