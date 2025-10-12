@@ -43,31 +43,8 @@ async function initializeDatabase() {
     db = await mysql.createConnection(dbConfig);
     console.log('✅ Connected to MySQL database!');
     
-    // Create users table
-    await db.execute(`
-      CREATE TABLE IF NOT EXISTS users (
-        user_id INT AUTO_INCREMENT PRIMARY KEY,
-        username VARCHAR(50) UNIQUE NOT NULL,
-        email VARCHAR(100) UNIQUE NOT NULL,
-        password_hash VARCHAR(255) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    
-    // Create expenses table with user_id foreign key
-    await db.execute(`
-      CREATE TABLE IF NOT EXISTS expenses (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        category VARCHAR(100) NOT NULL,
-        amount DECIMAL(10,2) NOT NULL,
-        description TEXT,
-        date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    
-    console.log('✅ Database tables initialized successfully');
+    // Create or update tables
+    await createOrUpdateTables();
     
   } catch (error) {
     console.error('❌ Database connection failed:', error.message);
@@ -100,6 +77,17 @@ async function createDatabase() {
     db = await mysql.createConnection(dbConfig);
     
     // Create tables
+    await createOrUpdateTables();
+    
+  } catch (error) {
+    console.error('❌ Failed to create database:', error.message);
+    if (tempDb) await tempDb.end();
+  }
+}
+
+async function createOrUpdateTables() {
+  try {
+    // Create users table
     await db.execute(`
       CREATE TABLE IF NOT EXISTS users (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -109,24 +97,96 @@ async function createDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    console.log('✅ Users table checked/created');
+
+    // Check if expenses table exists and has user_id column
+    const [tables] = await db.execute("SHOW TABLES LIKE 'expenses'");
     
-    await db.execute(`
-      CREATE TABLE IF NOT EXISTS expenses (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        category VARCHAR(100) NOT NULL,
-        amount DECIMAL(10,2) NOT NULL,
-        description TEXT,
-        date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    
-    console.log('✅ Tables created successfully');
+    if (tables.length > 0) {
+      // Table exists, check if user_id column exists
+      const [columns] = await db.execute("SHOW COLUMNS FROM expenses LIKE 'user_id'");
+      
+      if (columns.length === 0) {
+        console.log('🔄 Adding user_id column to expenses table...');
+        
+        // Drop the old expenses table and recreate it
+        await db.execute('DROP TABLE expenses');
+        console.log('✅ Old expenses table dropped');
+        
+        // Create new expenses table with user_id
+        await db.execute(`
+          CREATE TABLE expenses (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            category VARCHAR(100) NOT NULL,
+            amount DECIMAL(10,2) NOT NULL,
+            description TEXT,
+            date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        console.log('✅ New expenses table created with user_id');
+      } else {
+        console.log('✅ Expenses table already has user_id column');
+      }
+    } else {
+      // Create expenses table for the first time
+      await db.execute(`
+        CREATE TABLE expenses (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          user_id INT NOT NULL,
+          category VARCHAR(100) NOT NULL,
+          amount DECIMAL(10,2) NOT NULL,
+          description TEXT,
+          date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      console.log('✅ Expenses table created');
+    }
+
+    console.log('✅ All tables are ready!');
     
   } catch (error) {
-    console.error('❌ Failed to create database:', error.message);
-    if (tempDb) await tempDb.end();
+    console.error('❌ Table creation error:', error);
+    
+    // If there's an error, try to create the tables from scratch
+    try {
+      console.log('🔄 Attempting to recreate tables...');
+      
+      // Drop and recreate tables
+      await db.execute('DROP TABLE IF EXISTS expenses');
+      await db.execute('DROP TABLE IF EXISTS users');
+      
+      // Create users table
+      await db.execute(`
+        CREATE TABLE users (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          username VARCHAR(50) UNIQUE NOT NULL,
+          email VARCHAR(100) UNIQUE NOT NULL,
+          password_hash VARCHAR(255) NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      
+      // Create expenses table
+      await db.execute(`
+        CREATE TABLE expenses (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          user_id INT NOT NULL,
+          category VARCHAR(100) NOT NULL,
+          amount DECIMAL(10,2) NOT NULL,
+          description TEXT,
+          date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      
+      console.log('✅ Tables recreated successfully!');
+      
+    } catch (recreateError) {
+      console.error('❌ Failed to recreate tables:', recreateError);
+    }
   }
 }
 
@@ -165,8 +225,27 @@ app.get('/health', async (req, res) => {
   }
 });
 
+// Check database schema endpoint (for debugging)
+app.get('/debug/schema', async (req, res) => {
+  try {
+    const [tables] = await db.execute('SHOW TABLES');
+    const schemaInfo = {};
+    
+    for (const table of tables) {
+      const tableName = table[`Tables_in_${dbConfig.database}`];
+      const [columns] = await db.execute(`DESCRIBE ${tableName}`);
+      schemaInfo[tableName] = columns;
+    }
+    
+    res.json(schemaInfo);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // User Registration endpoint
 app.post('/register', async (req, res) => {
+  let connection;
   try {
     const { username, email, password } = req.body;
     console.log('📝 Registration attempt:', { username, email });
@@ -185,8 +264,10 @@ app.post('/register', async (req, res) => {
       });
     }
     
+    connection = await mysql.createConnection(dbConfig);
+    
     // Check if user already exists
-    const [existingUsers] = await db.execute(
+    const [existingUsers] = await connection.execute(
       'SELECT * FROM users WHERE username = ? OR email = ?', 
       [username, email]
     );
@@ -202,7 +283,7 @@ app.post('/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 12);
     
     // Insert new user
-    const [result] = await db.execute(
+    const [result] = await connection.execute(
       'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
       [username, email, hashedPassword]
     );
@@ -221,11 +302,14 @@ app.post('/register', async (req, res) => {
       success: false, 
       message: "Registration failed. Please try again." 
     });
+  } finally {
+    if (connection) await connection.end();
   }
 });
 
 // Login endpoint
 app.post('/login', async (req, res) => {
+  let connection;
   try {
     const { username, password } = req.body;
     console.log('🔐 Login attempt for user:', username);
@@ -237,8 +321,10 @@ app.post('/login', async (req, res) => {
       });
     }
     
+    connection = await mysql.createConnection(dbConfig);
+    
     // Find user
-    const [users] = await db.execute(
+    const [users] = await connection.execute(
       'SELECT * FROM users WHERE username = ?', 
       [username]
     );
@@ -280,6 +366,8 @@ app.post('/login', async (req, res) => {
       success: false, 
       message: "Login failed. Please try again." 
     });
+  } finally {
+    if (connection) await connection.end();
   }
 });
 
@@ -297,7 +385,6 @@ app.post('/add-expense', async (req, res) => {
       });
     }
 
-    // Use connection from pool
     connection = await mysql.createConnection(dbConfig);
     
     const sql = "INSERT INTO expenses (user_id, category, amount, description) VALUES (?, ?, ?, ?)";
@@ -317,9 +404,7 @@ app.post('/add-expense', async (req, res) => {
       message: "Failed to add expense: " + error.message 
     });
   } finally {
-    if (connection) {
-      await connection.end();
-    }
+    if (connection) await connection.end();
   }
 });
 
@@ -347,9 +432,7 @@ app.get('/expenses/:userId', async (req, res) => {
       message: "Failed to fetch expenses: " + error.message 
     });
   } finally {
-    if (connection) {
-      await connection.end();
-    }
+    if (connection) await connection.end();
   }
 });
 
@@ -391,9 +474,7 @@ app.get('/expenses/summary/:userId', async (req, res) => {
       message: "Failed to fetch summary: " + error.message 
     });
   } finally {
-    if (connection) {
-      await connection.end();
-    }
+    if (connection) await connection.end();
   }
 });
 
@@ -430,9 +511,7 @@ app.delete('/expenses/:userId/:id', async (req, res) => {
       message: 'Failed to delete expense: ' + error.message 
     });
   } finally {
-    if (connection) {
-      await connection.end();
-    }
+    if (connection) await connection.end();
   }
 });
 
@@ -444,6 +523,7 @@ initializeDatabase().then(() => {
     console.log(`\n🚀 BACKEND SERVER STARTED SUCCESSFULLY!`);
     console.log(`📍 Server running on: http://localhost:${PORT}`);
     console.log(`🧪 Test URL: http://localhost:${PORT}/test`);
+    console.log(`🔧 Debug schema: http://localhost:${PORT}/debug/schema`);
     console.log(`❤️  Health check: http://localhost:${PORT}/health`);
   });
 }).catch(error => {
