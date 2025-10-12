@@ -68,16 +68,43 @@
             border: 1px solid #ffeaa7;
         }
 
-        /* Login Section */
-        #login-section {
+        /* Auth Section */
+        #auth-section {
             text-align: center;
-            max-width: 400px;
+            max-width: 500px;
             margin: 0 auto;
         }
 
-        #login-section h2 {
-            text-align: center;
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 15px;
             border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .tab-button.active {
+            color: #007bff;
+            border-bottom: 3px solid #007bff;
+            margin-bottom: -2px;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px 0;
+        }
+
+        .tab-content.active {
+            display: block;
         }
 
         input {
@@ -105,13 +132,13 @@
             transition: all 0.3s;
         }
 
-        .login-btn {
+        .login-btn, .register-btn {
             background: #007bff;
             color: white;
             width: 100%;
         }
 
-        .login-btn:hover {
+        .login-btn:hover, .register-btn:hover {
             background: #0056b3;
         }
 
@@ -141,13 +168,23 @@
             border-radius: 5px;
         }
 
-        .demo-info {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 20px;
-            font-size: 14px;
-            color: #666;
+        .message {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
         }
 
         /* App Section */
@@ -163,6 +200,24 @@
             padding: 20px;
             background: #f8f9fa;
             border-radius: 10px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: #007bff;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
         }
 
         /* Add Expense Form */
@@ -304,23 +359,43 @@
              Checking server connection...
         </div>
 
-        <!-- Login Section -->
-        <div id="login-section">
-            <h2>Welcome Back</h2>
-            <input type="password" id="password" placeholder="Enter password (admin123)" value="admin123">
-            <button class="login-btn" onclick="login()">Login</button>
-            <p id="login-message" style="text-align: center; margin: 15px 0; min-height: 20px;"></p>
-            
-            <div class="demo-info">
-                <strong>Information:</strong><br>
-                Password: <code>admin123</code><br>
+        <!-- Auth Section -->
+        <div id="auth-section">
+            <div class="auth-tabs">
+                <button class="tab-button active" onclick="showTab('login')">Login</button>
+                <button class="tab-button" onclick="showTab('register')">Register</button>
+            </div>
+
+            <!-- Login Tab -->
+            <div id="login-tab" class="tab-content active">
+                <h2>Welcome Back</h2>
+                <input type="text" id="login-username" placeholder="Username" value="">
+                <input type="password" id="login-password" placeholder="Password" value="">
+                <button class="login-btn" onclick="login()">Login</button>
+                <div id="login-message" class="message"></div>
+            </div>
+
+            <!-- Register Tab -->
+            <div id="register-tab" class="tab-content">
+                <h2>Create Account</h2>
+                <input type="text" id="register-username" placeholder="Choose Username">
+                <input type="email" id="register-email" placeholder="Email Address">
+                <input type="password" id="register-password" placeholder="Password (min. 6 characters)">
+                <button class="register-btn" onclick="register()">Create Account</button>
+                <div id="register-message" class="message"></div>
             </div>
         </div>
 
         <!-- App Section -->
         <div id="app-section">
             <div class="header">
-                <h2 style="margin: 0; border: none;">Expense Dashboard</h2>
+                <div class="user-info">
+                    <div class="user-avatar" id="user-avatar">U</div>
+                    <div>
+                        <h2 style="margin: 0; border: none;">Welcome, <span id="user-name">User</span></h2>
+                        <small id="user-email">user@example.com</small>
+                    </div>
+                </div>
                 <button class="logout-btn" onclick="logout()">Logout</button>
             </div>
 
@@ -345,7 +420,7 @@
             <div class="summary-grid">
                 <div class="summary-card">
                     <h3>Total Spent</h3>
-                    <div class="total-amount" id="total-amount">$0.00</div>
+                    <div class="total-amount" id="total-amount">R0.00</div>
                     <p style="text-align: center; color: #666; margin: 0;">All expenses</p>
                 </div>
                 <div class="summary-card">
@@ -381,7 +456,7 @@
 
     <script>
         const API_URL = "http://localhost:5000";
-        let authToken = "logged-in"; // Simple authentication for demo
+        let currentUser = null;
 
         // Check server connection on page load
         async function checkServerConnection() {
@@ -407,14 +482,93 @@
             }
         }
 
+        // Tab management
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            event.target.classList.add('active');
+            
+            // Clear messages
+            document.getElementById('login-message').innerHTML = '';
+            document.getElementById('register-message').innerHTML = '';
+        }
+
+        // Registration function
+        async function register() {
+            const username = document.getElementById("register-username").value.trim();
+            const email = document.getElementById("register-email").value.trim();
+            const password = document.getElementById("register-password").value;
+            const messageElement = document.getElementById("register-message");
+            
+            if (!username || !email || !password) {
+                showMessage(messageElement, "Please fill in all fields", "error");
+                return;
+            }
+            
+            if (password.length < 6) {
+                showMessage(messageElement, "Password must be at least 6 characters long", "error");
+                return;
+            }
+
+            const registerBtn = document.querySelector('.register-btn');
+            const originalText = registerBtn.textContent;
+            registerBtn.innerHTML = '<div class="loading"></div> Creating account...';
+            registerBtn.disabled = true;
+
+            try {
+                const response = await fetch(`${API_URL}/register`, {
+                    method: "POST",
+                    headers: { 
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ username, email, password })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage(messageElement, data.message, "success");
+                    // Clear form
+                    document.getElementById("register-username").value = "";
+                    document.getElementById("register-email").value = "";
+                    document.getElementById("register-password").value = "";
+                    // Switch to login tab
+                    setTimeout(() => showTab('login'), 2000);
+                } else {
+                    showMessage(messageElement, data.message, "error");
+                }
+            } catch (error) {
+                console.error("Registration error:", error);
+                showMessage(messageElement, "Network error. Please check if server is running.", "error");
+            } finally {
+                registerBtn.textContent = originalText;
+                registerBtn.disabled = false;
+            }
+        }
+
         // Login function
         async function login() {
-            const password = document.getElementById("password").value;
+            const username = document.getElementById("login-username").value.trim();
+            const password = document.getElementById("login-password").value;
             const messageElement = document.getElementById("login-message");
             
-            // Show loading
-            messageElement.textContent = " Logging in...";
-            messageElement.style.color = "#007bff";
+            if (!username || !password) {
+                showMessage(messageElement, "Please enter both username and password", "error");
+                return;
+            }
+
+            const loginBtn = document.querySelector('.login-btn');
+            const originalText = loginBtn.textContent;
+            loginBtn.innerHTML = '<div class="loading"></div> Logging in...';
+            loginBtn.disabled = true;
 
             try {
                 const response = await fetch(`${API_URL}/login`, {
@@ -422,36 +576,54 @@
                     headers: { 
                         "Content-Type": "application/json",
                     },
-                    body: JSON.stringify({ password })
+                    body: JSON.stringify({ username, password })
                 });
 
                 const data = await response.json();
                 
                 if (data.success) {
-                    messageElement.textContent = " Login successful! Loading expenses...";
-                    messageElement.style.color = "green";
+                    showMessage(messageElement, data.message, "success");
+                    currentUser = data.user;
                     
-                    // Show app section
-                    document.getElementById("login-section").style.display = "none";
-                    document.getElementById("app-section").style.display = "block";
-                    
-                    // Load expenses and summary
-                    await loadExpenses();
-                    await loadSummary();
+                    // Load app interface
+                    setTimeout(() => {
+                        loadAppInterface();
+                    }, 1000);
                     
                 } else {
-                    messageElement.textContent = " " + (data.message || "Login failed");
-                    messageElement.style.color = "red";
+                    showMessage(messageElement, data.message, "error");
                 }
             } catch (error) {
                 console.error("Login error:", error);
-                messageElement.innerHTML = " Network error. Please check if server is running.";
-                messageElement.style.color = "red";
+                showMessage(messageElement, "Network error. Please check if server is running.", "error");
+            } finally {
+                loginBtn.textContent = originalText;
+                loginBtn.disabled = false;
             }
+        }
+
+        // Load app interface after successful login
+        function loadAppInterface() {
+            document.getElementById("auth-section").style.display = "none";
+            document.getElementById("app-section").style.display = "block";
+            
+            // Update user info
+            document.getElementById("user-name").textContent = currentUser.username;
+            document.getElementById("user-email").textContent = currentUser.email;
+            document.getElementById("user-avatar").textContent = currentUser.username.charAt(0).toUpperCase();
+            
+            // Load user data
+            loadExpenses();
+            loadSummary();
         }
 
         // Add new expense
         async function addExpense() {
+            if (!currentUser) {
+                alert("Please login first");
+                return;
+            }
+
             const category = document.getElementById("category").value.trim();
             const amount = document.getElementById("amount").value;
             const description = document.getElementById("description").value.trim();
@@ -472,12 +644,17 @@
                     headers: { 
                         "Content-Type": "application/json",
                     },
-                    body: JSON.stringify({ category, amount, description })
+                    body: JSON.stringify({ 
+                        userId: currentUser.id, 
+                        category, 
+                        amount, 
+                        description 
+                    })
                 });
 
                 const data = await response.json();
 
-                if (response.ok) {
+                if (response.ok && data.success) {
                     // Clear form
                     document.getElementById("category").value = "";
                     document.getElementById("amount").value = "";
@@ -502,11 +679,13 @@
 
         // Load expenses from server
         async function loadExpenses() {
+            if (!currentUser) return;
+
             const table = document.getElementById("expense-table");
             table.innerHTML = '<tr><td colspan="5" class="no-data"><div class="loading"></div> Loading expenses...</td></tr>';
 
             try {
-                const response = await fetch(`${API_URL}/expenses`);
+                const response = await fetch(`${API_URL}/expenses/${currentUser.id}`);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -541,8 +720,10 @@
 
         // Load expense summary
         async function loadSummary() {
+            if (!currentUser) return;
+
             try {
-                const response = await fetch(`${API_URL}/expenses/summary`);
+                const response = await fetch(`${API_URL}/expenses/summary/${currentUser.id}`);
                 const data = await response.json();
                 
                 // Update total amount
@@ -569,20 +750,23 @@
 
         // Delete expense
         async function deleteExpense(expenseId) {
+            if (!currentUser) return;
+
             if (!confirm("Are you sure you want to delete this expense?")) {
                 return;
             }
 
             try {
-                const response = await fetch(`${API_URL}/expenses/${expenseId}`, {
+                const response = await fetch(`${API_URL}/expenses/${currentUser.id}/${expenseId}`, {
                     method: "DELETE"
                 });
 
-                if (response.ok) {
+                const data = await response.json();
+
+                if (response.ok && data.success) {
                     await loadExpenses();
                     await loadSummary();
                 } else {
-                    const data = await response.json();
                     alert("Error: " + data.message);
                 }
             } catch (error) {
@@ -593,10 +777,19 @@
 
         // Logout function
         function logout() {
+            currentUser = null;
             document.getElementById("app-section").style.display = "none";
-            document.getElementById("login-section").style.display = "block";
-            document.getElementById("password").value = "admin123";
-            document.getElementById("login-message").textContent = "";
+            document.getElementById("auth-section").style.display = "block";
+            document.getElementById("login-username").value = "";
+            document.getElementById("login-password").value = "";
+            document.getElementById("login-message").innerHTML = "";
+            showTab('login');
+        }
+
+        // Helper function to show messages
+        function showMessage(element, message, type) {
+            element.innerHTML = message;
+            element.className = `message ${type}`;
         }
 
         // Initialize when page loads
@@ -607,14 +800,19 @@
             // Check server connection
             checkServerConnection();
             
-            // Add enter key support for login
-            document.getElementById("password").addEventListener("keypress", function(event) {
+            // Add enter key support for forms
+            document.getElementById("login-password").addEventListener("keypress", function(event) {
                 if (event.key === "Enter") {
                     login();
                 }
             });
             
-            // Add enter key support for expense form
+            document.getElementById("register-password").addEventListener("keypress", function(event) {
+                if (event.key === "Enter") {
+                    register();
+                }
+            });
+            
             document.getElementById("amount").addEventListener("keypress", function(event) {
                 if (event.key === "Enter") {
                     addExpense();
