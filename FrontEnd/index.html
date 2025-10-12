@@ -357,7 +357,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>💰 Expense Tracker</h1>
+        <h1> Expense Tracker</h1>
 
         <!-- Connection Status - Will be hidden after login -->
         <div id="connection-status" class="status warning">
@@ -471,8 +471,8 @@
                 const response = await fetch(`${API_URL}/test`);
                 if (response.ok) {
                     const data = await response.json();
-                    statusElement.innerHTML = `<div class="status connected">✅ Connected to server! Database: ${data.database}</div>`;
-                    console.log('✅ Server is connected:', data);
+                    statusElement.innerHTML = `<div class="status connected"> Connected to server! Database: ${data.database}</div>`;
+                    console.log(' Server is connected:', data);
                     
                     // Hide status after 3 seconds if user is not logged in
                     if (!currentUser) {
@@ -486,11 +486,11 @@
             } catch (error) {
                 statusElement.innerHTML = `
                     <div class="status error">
-                    ❌ Cannot connect to server at ${API_URL}
+                     Cannot connect to server at ${API_URL}
                         <br><small>Please make sure the backend server is running on port 5000</small>
                     </div>
                 `;
-                console.error('❌ Server connection failed:', error);
+                console.error(' Server connection failed:', error);
             }
         }
 
@@ -567,7 +567,7 @@
                     showMessage(messageElement, data.message, "error");
                 }
             } catch (error) {
-                console.error("❌ Registration error:", error);
+                console.error(" Registration error:", error);
                 showMessage(messageElement, "Network error. Please check if server is running.", "error");
             } finally {
                 registerBtn.textContent = originalText;
@@ -618,7 +618,7 @@
                     showMessage(messageElement, data.message, "error");
                 }
             } catch (error) {
-                console.error("❌ Login error:", error);
+                console.error(" Login error:", error);
                 showMessage(messageElement, "Network error. Please check if server is running.", "error");
             } finally {
                 loginBtn.textContent = originalText;
@@ -663,7 +663,7 @@
             addBtn.disabled = true;
 
             try {
-                console.log("📤 Sending expense data:", { 
+                console.log(" Sending expense data:", { 
                     userId: currentUser.id, 
                     category, 
                     amount, 
@@ -684,7 +684,7 @@
                 });
 
                 const data = await response.json();
-                console.log("📥 Server response:", data);
+                console.log(" Server response:", data);
 
                 if (response.ok && data.success) {
                     // Clear form
@@ -696,12 +696,12 @@
                     await loadExpenses();
                     await loadSummary();
                     
-                    console.log("✅ Expense added successfully:", data);
+                    console.log(" Expense added successfully:", data);
                 } else {
                     alert("Error: " + (data.message || "Unknown error"));
                 }
             } catch (error) {
-                console.error("❌ Add expense error:", error);
+                console.error(" Add expense error:", error);
                 alert("Failed to add expense. Check console for details.");
             } finally {
                 addBtn.textContent = originalText;
@@ -717,7 +717,7 @@
             table.innerHTML = '<tr><td colspan="5" class="no-data"><div class="loading"></div> Loading expenses...</td></tr>';
 
             try {
-                console.log("📥 Fetching expenses for user:", currentUser.id);
+                console.log(" Fetching expenses for user:", currentUser.id);
                 const response = await fetch(`${API_URL}/expenses/${currentUser.id}`);
                 
                 if (!response.ok) {
@@ -725,7 +725,7 @@
                 }
                 
                 const expenses = await response.json();
-                console.log("✅ Expenses received:", expenses);
+                console.log(" Expenses received:", expenses);
                 
                 if (expenses.length === 0) {
                     table.innerHTML = '<tr><td colspan="5" class="no-data">No expenses found. Add your first expense above!</td></tr>';
@@ -744,10 +744,10 @@
                     </tr>
                 `).join('');
 
-                console.log(`✅ Loaded ${expenses.length} expenses`);
+                console.log(` Loaded ${expenses.length} expenses`);
                 
             } catch (error) {
-                console.error("❌ Load expenses error:", error);
+                console.error(" Load expenses error:", error);
                 table.innerHTML = '<tr><td colspan="5" class="no-data" style="color: red;">Error loading expenses. Check console.</td></tr>';
             }
         }
@@ -757,11 +757,11 @@
             if (!currentUser) return;
 
             try {
-                console.log("📥 Fetching summary for user:", currentUser.id);
+                console.log(" Fetching summary for user:", currentUser.id);
                 const response = await fetch(`${API_URL}/expenses/summary/${currentUser.id}`);
                 const data = await response.json();
                 
-                console.log("✅ Summary received:", data);
+                console.log(" Summary received:", data);
                 
                 if (data.success) {
                     // Update total amount
@@ -781,11 +781,11 @@
                         breakdown.innerHTML = '<div class="no-data">No expenses yet</div>';
                     }
                 } else {
-                    console.error("❌ Summary error:", data.message);
+                    console.error(" Summary error:", data.message);
                 }
                 
             } catch (error) {
-                console.error("❌ Load summary error:", error);
+                console.error(" Load summary error:", error);
             }
         }
 
@@ -811,7 +811,7 @@
                     alert("Error: " + data.message);
                 }
             } catch (error) {
-                console.error("❌ Delete expense error:", error);
+                console.error(" Delete expense error:", error);
                 alert("Failed to delete expense");
             }
         }
@@ -829,7 +829,7 @@
             const statusElement = document.getElementById('connection-status');
             statusElement.style.display = 'block';
             statusElement.style.opacity = '1';
-            statusElement.innerHTML = '<div class="status connected">✅ Connected to server! Ready to login.</div>';
+            statusElement.innerHTML = '<div class="status connected"> Connected to server! Ready to login.</div>';
             
             showTab('login');
         }
@@ -842,8 +842,8 @@
 
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', function() {
-            console.log("💰 Expense Tracker Frontend Initialized");
-            console.log("📍 API URL:", API_URL);
+            console.log(" Expense Tracker Frontend Initialized");
+            console.log(" API URL:", API_URL);
             
             // Check server connection
             checkServerConnection();
