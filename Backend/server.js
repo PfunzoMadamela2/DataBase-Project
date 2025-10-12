@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
+import bcrypt from 'bcryptjs';
 
 // Load environment variables
 dotenv.config();
@@ -39,18 +40,32 @@ async function initializeDatabase() {
     db = await mysql.createConnection(dbConfig);
     console.log(' Connected to MySQL database!');
     
-    // Create expenses table
+    // Create users table
     await db.execute(`
-      CREATE TABLE IF NOT EXISTS expenses (
+      CREATE TABLE IF NOT EXISTS users (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        category VARCHAR(100) NOT NULL,
-        amount DECIMAL(10,2) NOT NULL,
-        description TEXT,
-        date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        username VARCHAR(50) UNIQUE NOT NULL,
+        email VARCHAR(100) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
     
-    console.log(' Expenses table ready');
+    // Create expenses table with user_id foreign key
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS expenses (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        amount DECIMAL(10,2) NOT NULL,
+        description TEXT,
+        date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+    
+    console.log(' Database tables initialized successfully');
     
   } catch (error) {
     console.error(' Database connection failed:', error.message);
@@ -82,13 +97,28 @@ async function createDatabase() {
     
     // Reconnect with database
     db = await mysql.createConnection(dbConfig);
+    
+    // Create tables
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(50) UNIQUE NOT NULL,
+        email VARCHAR(100) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
     await db.execute(`
       CREATE TABLE IF NOT EXISTS expenses (
         id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
         category VARCHAR(100) NOT NULL,
         amount DECIMAL(10,2) NOT NULL,
         description TEXT,
-        date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
     
@@ -128,13 +158,27 @@ async function trySimpleConnection() {
       database: 'expense_tracker'
     });
     
+    // Create tables
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(50) UNIQUE NOT NULL,
+        email VARCHAR(100) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
     await db.execute(`
       CREATE TABLE IF NOT EXISTS expenses (
         id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
         category VARCHAR(100) NOT NULL,
         amount DECIMAL(10,2) NOT NULL,
         description TEXT,
-        date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
     
@@ -184,53 +228,161 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// Login endpoint
-app.post('/login', (req, res) => {
-  const { password } = req.body;
-  console.log(' Login attempt received');
-  
-  //  password check
-  if (password === "admin123") {
+// User Registration endpoint
+app.post('/register', async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+    console.log(' Registration attempt:', { username, email });
+    
+    if (!username || !email || !password) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Username, email and password are required" 
+      });
+    }
+    
+    if (password.length < 6) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Password must be at least 6 characters long" 
+      });
+    }
+    
+    // Check if user already exists
+    const [existingUsers] = await db.execute(
+      'SELECT * FROM users WHERE username = ? OR email = ?', 
+      [username, email]
+    );
+    
+    if (existingUsers.length > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Username or email already exists" 
+      });
+    }
+    
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 12);
+    
+    // Insert new user
+    const [result] = await db.execute(
+      'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
+      [username, email, hashedPassword]
+    );
+    
     res.json({ 
       success: true,
-      message: "Login successful"
+      message: "Registration successful! You can now login.",
+      userId: result.insertId
     });
-  } else {
-    res.status(401).json({ 
+    
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ 
       success: false, 
-      message: "Invalid password" 
+      message: "Registration failed. Please try again." 
     });
   }
 });
 
-// Add expense
-app.post('/add-expense', async (req, res) => {
+// Login endpoint
+app.post('/login', async (req, res) => {
   try {
-    const { category, amount, description } = req.body;
-    console.log(' Adding expense:', { category, amount, description });
-
-    if (!category || !amount) {
-      return res.status(400).json({ message: "Category and amount are required" });
+    const { username, password } = req.body;
+    console.log(' Login attempt for user:', username);
+    
+    if (!username || !password) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Username and password are required" 
+      });
     }
-
-    const sql = "INSERT INTO expenses (category, amount, description) VALUES (?, ?, ?)";
-    const [result] = await db.execute(sql, [category, parseFloat(amount), description || '']);
+    
+    // Find user
+    const [users] = await db.execute(
+      'SELECT * FROM users WHERE username = ?', 
+      [username]
+    );
+    
+    if (users.length === 0) {
+      return res.status(401).json({ 
+        success: false, 
+        message: "Invalid username or password" 
+      });
+    }
+    
+    const user = users[0];
+    
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    
+    if (!isPasswordValid) {
+      return res.status(401).json({ 
+        success: false, 
+        message: "Invalid username or password" 
+      });
+    }
     
     res.json({ 
+      success: true,
+      message: "Login successful!",
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email
+      }
+    });
+    
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Login failed. Please try again." 
+    });
+  }
+});
+
+// Add expense (user-specific)
+app.post('/add-expense', async (req, res) => {
+  try {
+    const { userId, category, amount, description } = req.body;
+    console.log(' Adding expense for user:', userId, { category, amount, description });
+
+    if (!userId || !category || !amount) {
+      return res.status(400).json({ 
+        success: false,
+        message: "User ID, category and amount are required" 
+      });
+    }
+
+    const sql = "INSERT INTO expenses (user_id, category, amount, description) VALUES (?, ?, ?, ?)";
+    const [result] = await db.execute(sql, [userId, category, parseFloat(amount), description || '']);
+    
+    res.json({ 
+      success: true,
       message: "Expense added successfully!",
       id: result.insertId
     });
   } catch (error) {
     console.error('Add expense error:', error);
-    res.status(500).json({ message: "Failed to add expense" });
+    res.status(500).json({ 
+      success: false,
+      message: "Failed to add expense" 
+    });
   }
 });
 
-// Get all expenses
-app.get('/expenses', async (req, res) => {
+// Get user's expenses
+app.get('/expenses/:userId', async (req, res) => {
   try {
-    console.log(' Fetching expenses...');
-    const [results] = await db.execute("SELECT * FROM expenses ORDER BY date DESC");
+    const userId = req.params.userId;
+    console.log(' Fetching expenses for user:', userId);
+    
+    const [results] = await db.execute(
+      "SELECT * FROM expenses WHERE user_id = ? ORDER BY date DESC", 
+      [userId]
+    );
+    
     res.json(results);
   } catch (error) {
     console.error('Get expenses error:', error);
@@ -238,20 +390,26 @@ app.get('/expenses', async (req, res) => {
   }
 });
 
-// Get summary
-app.get('/expenses/summary', async (req, res) => {
+// Get user's expense summary
+app.get('/expenses/summary/:userId', async (req, res) => {
   try {
+    const userId = req.params.userId;
+    
     const [summary] = await db.execute(`
       SELECT 
         category,
         COUNT(*) as count,
         SUM(amount) as total_amount
       FROM expenses 
+      WHERE user_id = ?
       GROUP BY category
       ORDER BY total_amount DESC
-    `);
+    `, [userId]);
 
-    const [total] = await db.execute('SELECT SUM(amount) as grand_total FROM expenses');
+    const [total] = await db.execute(
+      'SELECT SUM(amount) as grand_total FROM expenses WHERE user_id = ?', 
+      [userId]
+    );
     
     res.json({
       byCategory: summary,
@@ -263,20 +421,32 @@ app.get('/expenses/summary', async (req, res) => {
   }
 });
 
-// Delete expense
-app.delete('/expenses/:id', async (req, res) => {
+// Delete user's expense
+app.delete('/expenses/:userId/:id', async (req, res) => {
   try {
-    const expenseId = req.params.id;
-    const [result] = await db.execute('DELETE FROM expenses WHERE id = ?', [expenseId]);
+    const { userId, id } = req.params;
+    const [result] = await db.execute(
+      'DELETE FROM expenses WHERE id = ? AND user_id = ?', 
+      [id, userId]
+    );
     
     if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'Expense not found' });
+      return res.status(404).json({ 
+        success: false,
+        message: 'Expense not found' 
+      });
     }
     
-    res.json({ message: 'Expense deleted successfully' });
+    res.json({ 
+      success: true,
+      message: 'Expense deleted successfully' 
+    });
   } catch (error) {
     console.error('Delete expense error:', error);
-    res.status(500).json({ message: 'Failed to delete expense' });
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to delete expense' 
+    });
   }
 });
 
@@ -288,7 +458,7 @@ initializeDatabase().then(() => {
     console.log(`\n BACKEND SERVER STARTED SUCCESSFULLY!`);
     console.log(` Server running on: http://localhost:${PORT}`);
     console.log(` Test URL: http://localhost:${PORT}/test`);
-    console.log(`  Health check: http://localhost:${PORT}/health`);
+    console.log(` Health check: http://localhost:${PORT}/health`);
   });
 }).catch(error => {
   console.error('Failed to initialize database:', error);
@@ -297,28 +467,4 @@ initializeDatabase().then(() => {
   app.listen(PORT, () => {
     console.log(`\n Server running on http://localhost:${PORT} (Limited mode - No database)`);
   });
-});
-
-app.get('/expenses', async (req, res) => {
-  try {
-    console.log(' Fetching expenses...');
-    
-    if (!db) {
-      console.log(' Database connection not available');
-      return res.status(503).json({ message: "Database not available" });
-    }
-
-    const [results] = await db.execute("SELECT * FROM expenses ORDER BY date DESC");
-    console.log(` Found ${results.length} expenses`);
-    
-    // Log the first few expenses to verify data
-    if (results.length > 0) {
-      console.log('Sample expenses:', results.slice(0, 3));
-    }
-    
-    res.json(results);
-  } catch (error) {
-    console.error('Get expenses error:', error);
-    res.status(500).json({ message: "Failed to fetch expenses" });
-  }
 });
