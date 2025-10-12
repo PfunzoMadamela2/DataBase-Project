@@ -23,7 +23,10 @@ const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || 'Pf@34906304',
-  database: process.env.DB_NAME || 'expense_tracker'
+  database: process.env.DB_NAME || 'expense_tracker',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 };
 
 console.log('Database config:', {
@@ -38,7 +41,7 @@ let db;
 async function initializeDatabase() {
   try {
     db = await mysql.createConnection(dbConfig);
-    console.log(' Connected to MySQL database!');
+    console.log('✅ Connected to MySQL database!');
     
     // Create users table
     await db.execute(`
@@ -60,38 +63,36 @@ async function initializeDatabase() {
         amount DECIMAL(10,2) NOT NULL,
         description TEXT,
         date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
     
-    console.log(' Database tables initialized successfully');
+    console.log('✅ Database tables initialized successfully');
     
   } catch (error) {
-    console.error(' Database connection failed:', error.message);
+    console.error('❌ Database connection failed:', error.message);
     
     if (error.code === 'ER_BAD_DB_ERROR') {
-      console.log(' Database does not exist. Creating it...');
+      console.log('📁 Database does not exist. Creating it...');
       await createDatabase();
     } else if (error.code === 'ER_ACCESS_DENIED_ERROR') {
-      console.log(' Access denied. Please check your MySQL credentials.');
-      console.log('Trying with simplified connection...');
-      await trySimpleConnection();
+      console.log('🔐 Access denied. Please check your MySQL credentials.');
     }
   }
 }
 
 async function createDatabase() {
+  let tempDb;
   try {
     // Connect without database
-    const tempDb = await mysql.createConnection({
+    tempDb = await mysql.createConnection({
       host: dbConfig.host,
       user: dbConfig.user,
       password: dbConfig.password
     });
     
     await tempDb.execute(`CREATE DATABASE IF NOT EXISTS ${dbConfig.database}`);
-    console.log(` Database '${dbConfig.database}' created`);
+    console.log(`✅ Database '${dbConfig.database}' created`);
     
     await tempDb.end();
     
@@ -117,86 +118,22 @@ async function createDatabase() {
         amount DECIMAL(10,2) NOT NULL,
         description TEXT,
         date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      )
-    `);
-    
-    console.log(' Tables created successfully');
-    
-  } catch (error) {
-    console.error(' Failed to create database:', error.message);
-  }
-}
-
-async function trySimpleConnection() {
-  try {
-    // Try with very basic connection
-    const simpleConfig = {
-      host: 'localhost',
-      user: 'root',
-      password: 'Pf@34906304'
-    };
-    
-    const tempDb = await mysql.createConnection(simpleConfig);
-    console.log(' Basic MySQL connection successful!');
-    
-    // Check if database exists
-    const [databases] = await tempDb.execute('SHOW DATABASES');
-    const dbExists = databases.some(db => db.Database === 'expense_tracker');
-    
-    if (!dbExists) {
-      await tempDb.execute('CREATE DATABASE expense_tracker');
-      console.log(' Created expense_tracker database');
-    }
-    
-    await tempDb.end();
-    
-    // Now connect with database
-    db = await mysql.createConnection({
-      ...simpleConfig,
-      database: 'expense_tracker'
-    });
-    
-    // Create tables
-    await db.execute(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        username VARCHAR(50) UNIQUE NOT NULL,
-        email VARCHAR(100) UNIQUE NOT NULL,
-        password_hash VARCHAR(255) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
     
-    await db.execute(`
-      CREATE TABLE IF NOT EXISTS expenses (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        category VARCHAR(100) NOT NULL,
-        amount DECIMAL(10,2) NOT NULL,
-        description TEXT,
-        date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      )
-    `);
-    
-    console.log(' Full database setup complete!');
+    console.log('✅ Tables created successfully');
     
   } catch (error) {
-    console.error(' Simple connection also failed:', error.message);
-    console.log('\n Please check:');
-    console.log('1. Is MySQL running?');
-    console.log('2. Is the password correct?');
-    console.log('3. Try: sudo mysql -u root -p');
+    console.error('❌ Failed to create database:', error.message);
+    if (tempDb) await tempDb.end();
   }
 }
 
 // Test endpoint
 app.get('/test', (req, res) => {
   res.json({ 
-    message: ' Backend server is working!', 
+    message: '✅ Backend server is working!', 
     timestamp: new Date().toISOString(),
     database: db ? 'Connected' : 'Disconnected'
   });
@@ -232,7 +169,7 @@ app.get('/health', async (req, res) => {
 app.post('/register', async (req, res) => {
   try {
     const { username, email, password } = req.body;
-    console.log(' Registration attempt:', { username, email });
+    console.log('📝 Registration attempt:', { username, email });
     
     if (!username || !email || !password) {
       return res.status(400).json({ 
@@ -270,6 +207,8 @@ app.post('/register', async (req, res) => {
       [username, email, hashedPassword]
     );
     
+    console.log('✅ New user registered:', username);
+    
     res.json({ 
       success: true,
       message: "Registration successful! You can now login.",
@@ -277,7 +216,7 @@ app.post('/register', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Registration error:', error);
+    console.error('❌ Registration error:', error);
     res.status(500).json({ 
       success: false, 
       message: "Registration failed. Please try again." 
@@ -289,7 +228,7 @@ app.post('/register', async (req, res) => {
 app.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
-    console.log(' Login attempt for user:', username);
+    console.log('🔐 Login attempt for user:', username);
     
     if (!username || !password) {
       return res.status(400).json({ 
@@ -323,6 +262,8 @@ app.post('/login', async (req, res) => {
       });
     }
     
+    console.log('✅ User logged in:', username);
+    
     res.json({ 
       success: true,
       message: "Login successful!",
@@ -334,7 +275,7 @@ app.post('/login', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('❌ Login error:', error);
     res.status(500).json({ 
       success: false, 
       message: "Login failed. Please try again." 
@@ -344,9 +285,10 @@ app.post('/login', async (req, res) => {
 
 // Add expense (user-specific)
 app.post('/add-expense', async (req, res) => {
+  let connection;
   try {
     const { userId, category, amount, description } = req.body;
-    console.log(' Adding expense for user:', userId, { category, amount, description });
+    console.log('💰 Adding expense for user:', userId, { category, amount, description });
 
     if (!userId || !category || !amount) {
       return res.status(400).json({ 
@@ -355,8 +297,13 @@ app.post('/add-expense', async (req, res) => {
       });
     }
 
+    // Use connection from pool
+    connection = await mysql.createConnection(dbConfig);
+    
     const sql = "INSERT INTO expenses (user_id, category, amount, description) VALUES (?, ?, ?, ?)";
-    const [result] = await db.execute(sql, [userId, category, parseFloat(amount), description || '']);
+    const [result] = await connection.execute(sql, [userId, category, parseFloat(amount), description || '']);
+    
+    console.log('✅ Expense added successfully, ID:', result.insertId);
     
     res.json({ 
       success: true,
@@ -364,38 +311,57 @@ app.post('/add-expense', async (req, res) => {
       id: result.insertId
     });
   } catch (error) {
-    console.error('Add expense error:', error);
+    console.error('❌ Add expense error:', error);
     res.status(500).json({ 
       success: false,
-      message: "Failed to add expense" 
+      message: "Failed to add expense: " + error.message 
     });
+  } finally {
+    if (connection) {
+      await connection.end();
+    }
   }
 });
 
 // Get user's expenses
 app.get('/expenses/:userId', async (req, res) => {
+  let connection;
   try {
     const userId = req.params.userId;
-    console.log(' Fetching expenses for user:', userId);
+    console.log('📊 Fetching expenses for user:', userId);
     
-    const [results] = await db.execute(
+    connection = await mysql.createConnection(dbConfig);
+    
+    const [results] = await connection.execute(
       "SELECT * FROM expenses WHERE user_id = ? ORDER BY date DESC", 
       [userId]
     );
     
+    console.log(`✅ Found ${results.length} expenses for user ${userId}`);
+    
     res.json(results);
   } catch (error) {
-    console.error('Get expenses error:', error);
-    res.status(500).json({ message: "Failed to fetch expenses" });
+    console.error('❌ Get expenses error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: "Failed to fetch expenses: " + error.message 
+    });
+  } finally {
+    if (connection) {
+      await connection.end();
+    }
   }
 });
 
 // Get user's expense summary
 app.get('/expenses/summary/:userId', async (req, res) => {
+  let connection;
   try {
     const userId = req.params.userId;
     
-    const [summary] = await db.execute(`
+    connection = await mysql.createConnection(dbConfig);
+    
+    const [summary] = await connection.execute(`
       SELECT 
         category,
         COUNT(*) as count,
@@ -406,26 +372,40 @@ app.get('/expenses/summary/:userId', async (req, res) => {
       ORDER BY total_amount DESC
     `, [userId]);
 
-    const [total] = await db.execute(
+    const [total] = await connection.execute(
       'SELECT SUM(amount) as grand_total FROM expenses WHERE user_id = ?', 
       [userId]
     );
     
+    console.log(`✅ Summary loaded for user ${userId}`);
+    
     res.json({
+      success: true,
       byCategory: summary,
       grandTotal: total[0].grand_total || 0
     });
   } catch (error) {
-    console.error('Summary error:', error);
-    res.status(500).json({ message: "Failed to fetch summary" });
+    console.error('❌ Summary error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: "Failed to fetch summary: " + error.message 
+    });
+  } finally {
+    if (connection) {
+      await connection.end();
+    }
   }
 });
 
 // Delete user's expense
 app.delete('/expenses/:userId/:id', async (req, res) => {
+  let connection;
   try {
     const { userId, id } = req.params;
-    const [result] = await db.execute(
+    
+    connection = await mysql.createConnection(dbConfig);
+    
+    const [result] = await connection.execute(
       'DELETE FROM expenses WHERE id = ? AND user_id = ?', 
       [id, userId]
     );
@@ -437,16 +417,22 @@ app.delete('/expenses/:userId/:id', async (req, res) => {
       });
     }
     
+    console.log(`✅ Expense ${id} deleted for user ${userId}`);
+    
     res.json({ 
       success: true,
       message: 'Expense deleted successfully' 
     });
   } catch (error) {
-    console.error('Delete expense error:', error);
+    console.error('❌ Delete expense error:', error);
     res.status(500).json({ 
       success: false,
-      message: 'Failed to delete expense' 
+      message: 'Failed to delete expense: ' + error.message 
     });
+  } finally {
+    if (connection) {
+      await connection.end();
+    }
   }
 });
 
@@ -455,16 +441,11 @@ const PORT = process.env.PORT || 5000;
 
 initializeDatabase().then(() => {
   app.listen(PORT, () => {
-    console.log(`\n BACKEND SERVER STARTED SUCCESSFULLY!`);
-    console.log(` Server running on: http://localhost:${PORT}`);
-    console.log(` Test URL: http://localhost:${PORT}/test`);
-    console.log(` Health check: http://localhost:${PORT}/health`);
+    console.log(`\n🚀 BACKEND SERVER STARTED SUCCESSFULLY!`);
+    console.log(`📍 Server running on: http://localhost:${PORT}`);
+    console.log(`🧪 Test URL: http://localhost:${PORT}/test`);
+    console.log(`❤️  Health check: http://localhost:${PORT}/health`);
   });
 }).catch(error => {
-  console.error('Failed to initialize database:', error);
-  console.log('\n Starting server without database connection...');
-  
-  app.listen(PORT, () => {
-    console.log(`\n Server running on http://localhost:${PORT} (Limited mode - No database)`);
-  });
+  console.error('❌ Failed to initialize database:', error);
 });
