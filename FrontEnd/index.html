@@ -30,20 +30,98 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
             min-height: 100vh;
             padding: 20px;
             color: var(--dark);
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Background Animation */
+        .background-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            overflow: hidden;
+        }
+
+        .floating-shapes {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .shape {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.1;
+            animation: float 20s infinite linear;
+        }
+
+        .shape:nth-child(1) {
+            width: 80px;
+            height: 80px;
+            background: #ff6384;
+            top: 10%;
+            left: 10%;
+            animation-delay: 0s;
+        }
+
+        .shape:nth-child(2) {
+            width: 120px;
+            height: 120px;
+            background: #36a2eb;
+            top: 60%;
+            left: 80%;
+            animation-delay: -5s;
+        }
+
+        .shape:nth-child(3) {
+            width: 60px;
+            height: 60px;
+            background: #ffce56;
+            top: 80%;
+            left: 20%;
+            animation-delay: -10s;
+        }
+
+        .shape:nth-child(4) {
+            width: 100px;
+            height: 100px;
+            background: #4bc0c0;
+            top: 30%;
+            left: 70%;
+            animation-delay: -15s;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+            25% {
+                transform: translate(20px, 20px) rotate(90deg);
+            }
+            50% {
+                transform: translate(0, 40px) rotate(180deg);
+            }
+            75% {
+                transform: translate(-20px, 20px) rotate(270deg);
+            }
         }
 
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            background: white;
+            background: rgba(255, 255, 255, 0.95);
             border-radius: var(--border-radius);
             padding: 30px;
             box-shadow: var(--shadow);
             animation: fadeIn 0.8s ease;
+            backdrop-filter: blur(5px);
         }
 
         h1 {
@@ -279,6 +357,50 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
 
+        /* Main App Tabs */
+        .app-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #eee;
+            border-radius: var(--border-radius) var(--border-radius) 0 0;
+            overflow: hidden;
+            background: var(--light);
+        }
+
+        .app-tab-button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            background: var(--light);
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .app-tab-button.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .app-tab-content {
+            display: none;
+            padding: 20px;
+            background: white;
+            border-radius: 0 0 var(--border-radius) var(--border-radius);
+            box-shadow: var(--shadow);
+            min-height: 500px;
+        }
+
+        .app-tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
         /* Add Expense Form */
         .form-group {
             display: grid;
@@ -337,6 +459,65 @@
             height: 300px;
             margin-top: 20px;
             position: relative;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .chart-container:hover {
+            transform: scale(1.02);
+        }
+
+        /* Chart Modal */
+        .chart-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .chart-modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 30px;
+            max-width: 90%;
+            max-height: 90%;
+            position: relative;
+            box-shadow: var(--shadow);
+            animation: scaleIn 0.3s ease;
+        }
+
+        .modal-chart-container {
+            width: 800px;
+            height: 500px;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: var(--danger);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: bold;
         }
 
         /* Expense Table */
@@ -414,6 +595,11 @@
             100% { transform: scale(1); }
         }
 
+        @keyframes scaleIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
         /* Filter Section */
         .filter-section {
             display: flex;
@@ -436,6 +622,11 @@
         @media (max-width: 1024px) {
             .dashboard-grid {
                 grid-template-columns: 1fr;
+            }
+            
+            .modal-chart-container {
+                width: 95%;
+                height: 400px;
             }
         }
 
@@ -466,59 +657,14 @@
             th, td {
                 padding: 10px 8px;
             }
-        }
-
-        /* Toggle Switch */
-        .toggle-container {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin: 15px 0;
-        }
-
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 60px;
-            height: 34px;
-        }
-
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 34px;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 26px;
-            width: 26px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-
-        input:checked + .slider {
-            background-color: var(--primary);
-        }
-
-        input:checked + .slider:before {
-            transform: translateX(26px);
+            
+            .app-tabs {
+                flex-direction: column;
+            }
+            
+            .modal-chart-container {
+                height: 300px;
+            }
         }
 
         /* Export Button */
@@ -534,6 +680,16 @@
     </style>
 </head>
 <body>
+    <!-- Background Animation -->
+    <div class="background-animation">
+        <div class="floating-shapes">
+            <div class="shape"></div>
+            <div class="shape"></div>
+            <div class="shape"></div>
+            <div class="shape"></div>
+        </div>
+    </div>
+
     <div class="container">
         <h1> Expense Tracker Pro</h1>
 
@@ -582,85 +738,227 @@
                 <button class="logout-btn" onclick="logout()">Logout</button>
             </div>
 
-            <!-- Add Expense Form -->
-            <div class="form-group">
-                <input type="text" id="category" placeholder="Category (e.g., Food)" list="categories">
-                <datalist id="categories">
-                    <option value="Food">
-                    <option value="Transport">
-                    <option value="Entertainment">
-                    <option value="Utilities">
-                    <option value="Shopping">
-                    <option value="Healthcare">
-                    <option value="Other">
-                </datalist>
-                <input type="number" id="amount" placeholder="Amount" step="0.01" min="0">
-                <input type="text" id="description" placeholder="Description (optional)">
-                <button class="add-btn" onclick="addExpense()">Add Expense</button>
+            <!-- Main App Tabs -->
+            <div class="app-tabs">
+                <button class="app-tab-button active" onclick="showAppTab('dashboard')">
+                    📊 Dashboard
+                </button>
+                <button class="app-tab-button" onclick="showAppTab('expenses')">
+                    💰 Expenses
+                </button>
+                <button class="app-tab-button" onclick="showAppTab('analytics')">
+                    📈 Analytics
+                </button>
+                <button class="app-tab-button" onclick="showAppTab('settings')">
+                    ⚙️ Settings
+                </button>
             </div>
 
-            <!-- Filter Section -->
-            <div class="filter-section">
-                <select id="time-filter" onchange="applyFilters()">
-                    <option value="all">All Time</option>
-                    <option value="today">Today</option>
-                    <option value="week">This Week</option>
-                    <option value="month">This Month</option>
-                    <option value="year">This Year</option>
-                </select>
-                <select id="category-filter" onchange="applyFilters()">
-                    <option value="all">All Categories</option>
-                </select>
-                <input type="text" id="search-filter" placeholder="Search expenses..." oninput="applyFilters()">
-                <button class="export-btn" onclick="exportData()">Export Data</button>
+            <!-- Dashboard Tab -->
+            <div id="dashboard-tab" class="app-tab-content active">
+                <!-- Add Expense Form -->
+                <div class="form-group">
+                    <input type="text" id="category" placeholder="Category (e.g., Food)" list="categories">
+                    <datalist id="categories">
+                        <option value="Food">
+                        <option value="Transport">
+                        <option value="Entertainment">
+                        <option value="Utilities">
+                        <option value="Shopping">
+                        <option value="Healthcare">
+                        <option value="Other">
+                    </datalist>
+                    <input type="number" id="amount" placeholder="Amount" step="0.01" min="0">
+                    <input type="text" id="description" placeholder="Description (optional)">
+                    <button class="add-btn" onclick="addExpense()">Add Expense</button>
+                </div>
+
+                <!-- Dashboard -->
+                <div class="dashboard-grid">
+                    <div class="dashboard-card">
+                        <h3>Total Spent</h3>
+                        <div class="total-amount" id="total-amount">R0.00</div>
+                        <p style="text-align: center; color: #666; margin: 0;">All expenses</p>
+                    </div>
+                    <div class="dashboard-card">
+                        <h3>Spending by Category</h3>
+                        <div id="category-breakdown">
+                            <div class="no-data">No expenses yet</div>
+                        </div>
+                    </div>
+                    <div class="dashboard-card">
+                        <h3>Category Distribution</h3>
+                        <div class="chart-container" onclick="openChartModal('category')">
+                            <canvas id="category-chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="dashboard-card">
+                        <h3>Monthly Trend</h3>
+                        <div class="chart-container" onclick="openChartModal('trend')">
+                            <canvas id="trend-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Dashboard -->
-            <div class="dashboard-grid">
-                <div class="dashboard-card">
-                    <h3>Total Spent</h3>
-                    <div class="total-amount" id="total-amount">R0.00</div>
-                    <p style="text-align: center; color: #666; margin: 0;">All expenses</p>
+            <!-- Expenses Tab -->
+            <div id="expenses-tab" class="app-tab-content">
+                <h2>Expense Management</h2>
+                
+                <!-- Filter Section -->
+                <div class="filter-section">
+                    <select id="time-filter" onchange="applyFilters()">
+                        <option value="all">All Time</option>
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="year">This Year</option>
+                    </select>
+                    <select id="category-filter" onchange="applyFilters()">
+                        <option value="all">All Categories</option>
+                    </select>
+                    <input type="text" id="search-filter" placeholder="Search expenses..." oninput="applyFilters()">
+                    <button class="export-btn" onclick="exportData()">Export Data</button>
                 </div>
-                <div class="dashboard-card">
-                    <h3>Spending by Category</h3>
-                    <div id="category-breakdown">
-                        <div class="no-data">No expenses yet</div>
+
+                <!-- Expense List -->
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Category</th>
+                                <th>Amount</th>
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="expense-table">
+                            <tr>
+                                <td colspan="5" class="no-data">No expenses found. Add your first expense above!</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Analytics Tab -->
+            <div id="analytics-tab" class="app-tab-content">
+                <h2>Advanced Analytics</h2>
+                
+                <div class="dashboard-grid">
+                    <div class="dashboard-card">
+                        <h3>Spending Patterns</h3>
+                        <div class="chart-container" onclick="openChartModal('category')">
+                            <canvas id="analytics-category-chart"></canvas>
+                        </div>
                     </div>
-                </div>
-                <div class="dashboard-card">
-                    <h3>Category Distribution</h3>
-                    <div class="chart-container">
-                        <canvas id="category-chart"></canvas>
+                    <div class="dashboard-card">
+                        <h3>Monthly Comparison</h3>
+                        <div class="chart-container" onclick="openChartModal('trend')">
+                            <canvas id="analytics-trend-chart"></canvas>
+                        </div>
                     </div>
-                </div>
-                <div class="dashboard-card">
-                    <h3>Monthly Trend</h3>
-                    <div class="chart-container">
-                        <canvas id="trend-chart"></canvas>
+                    <div class="dashboard-card">
+                        <h3>Weekly Breakdown</h3>
+                        <div class="chart-container">
+                            <canvas id="weekly-chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="dashboard-card">
+                        <h3>Budget vs Actual</h3>
+                        <div class="chart-container">
+                            <canvas id="budget-chart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Expense List -->
-            <h2>Recent Expenses</h2>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Category</th>
-                            <th>Amount</th>
-                            <th>Description</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="expense-table">
-                        <tr>
-                            <td colspan="5" class="no-data">No expenses found. Add your first expense above!</td>
-                        </tr>
-                    </tbody>
-                </table>
+            <!-- Settings Tab -->
+            <div id="settings-tab" class="app-tab-content">
+                <h2>Settings & Preferences</h2>
+                
+                <div class="dashboard-grid">
+                    <div class="dashboard-card">
+                        <h3>User Profile</h3>
+                        <div style="padding: 20px;">
+                            <div class="user-info" style="justify-content: center; margin-bottom: 20px;">
+                                <div class="user-avatar" id="settings-user-avatar">U</div>
+                                <div>
+                                    <h3 id="settings-user-name">User</h3>
+                                    <small id="settings-user-email">user@example.com</small>
+                                </div>
+                            </div>
+                            <button class="add-btn" style="width: 100%;">Edit Profile</button>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-card">
+                        <h3>Preferences</h3>
+                        <div style="padding: 15px;">
+                            <div style="margin-bottom: 15px;">
+                                <label>Currency: </label>
+                                <select style="width: 100%; padding: 10px; margin-top: 5px;">
+                                    <option>ZAR (R)</option>
+                                    <option>USD ($)</option>
+                                    <option>EUR (€)</option>
+                                    <option>GBP (£)</option>
+                                </select>
+                            </div>
+                            <div style="margin-bottom: 15px;">
+                                <label>Date Format: </label>
+                                <select style="width: 100%; padding: 10px; margin-top: 5px;">
+                                    <option>DD/MM/YYYY</option>
+                                    <option>MM/DD/YYYY</option>
+                                    <option>YYYY-MM-DD</option>
+                                </select>
+                            </div>
+                            <button class="export-btn" style="width: 100%;">Save Preferences</button>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-card">
+                        <h3>Data Management</h3>
+                        <div style="padding: 20px;">
+                            <p style="margin-bottom: 15px;">Export your expense data for backup or analysis.</p>
+                            <button class="export-btn" style="width: 100%; margin-bottom: 10px;" onclick="exportData()">
+                                Export All Data
+                            </button>
+                            <button class="logout-btn" style="width: 100%;">
+                                Clear All Data
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-card">
+                        <h3>Notifications</h3>
+                        <div style="padding: 20px;">
+                            <div style="margin-bottom: 15px;">
+                                <input type="checkbox" id="email-notifications" checked>
+                                <label for="email-notifications">Email notifications</label>
+                            </div>
+                            <div style="margin-bottom: 15px;">
+                                <input type="checkbox" id="budget-alerts" checked>
+                                <label for="budget-alerts">Budget alerts</label>
+                            </div>
+                            <div style="margin-bottom: 15px;">
+                                <input type="checkbox" id="weekly-reports">
+                                <label for="weekly-reports">Weekly reports</label>
+                            </div>
+                            <button class="add-btn" style="width: 100%;">Save Settings</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart Modal -->
+    <div class="chart-modal" id="chart-modal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeChartModal()">×</button>
+            <div class="modal-chart-container">
+                <canvas id="modal-chart"></canvas>
             </div>
         </div>
     </div>
@@ -671,6 +969,7 @@
         let allExpenses = [];
         let categoryChart = null;
         let trendChart = null;
+        let modalChart = null;
 
         // Check server connection on page load
         async function checkServerConnection() {
@@ -729,6 +1028,21 @@
             // Clear messages
             document.getElementById('login-message').innerHTML = '';
             document.getElementById('register-message').innerHTML = '';
+        }
+
+        // App Tab management
+        function showAppTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.app-tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.app-tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            event.target.classList.add('active');
         }
 
         // Registration function
@@ -848,6 +1162,9 @@
             document.getElementById("user-name").textContent = currentUser.username;
             document.getElementById("user-email").textContent = currentUser.email;
             document.getElementById("user-avatar").textContent = currentUser.username.charAt(0).toUpperCase();
+            document.getElementById("settings-user-name").textContent = currentUser.username;
+            document.getElementById("settings-user-email").textContent = currentUser.email;
+            document.getElementById("settings-user-avatar").textContent = currentUser.username.charAt(0).toUpperCase();
             
             // Add entrance animation to app section
             document.getElementById("app-section").style.animation = "slideUp 0.5s ease";
@@ -1146,7 +1463,6 @@
             });
             
             // Create monthly trend chart (line)
-            // For now, we'll create a simple demo. In a real app, you'd aggregate by month
             const monthlyData = aggregateExpensesByMonth(allExpenses);
             
             trendChart = new Chart(trendCtx, {
@@ -1172,6 +1488,137 @@
                             ticks: {
                                 callback: function(value) {
                                     return 'R' + value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Create analytics charts
+            createAnalyticsCharts(categoryData, monthlyData);
+        }
+
+        // Create analytics charts
+        function createAnalyticsCharts(categoryData, monthlyData) {
+            // Analytics category chart
+            const analyticsCategoryCtx = document.getElementById('analytics-category-chart').getContext('2d');
+            new Chart(analyticsCategoryCtx, {
+                type: 'bar',
+                data: {
+                    labels: categoryData.map(item => item.category),
+                    datasets: [{
+                        label: 'Spending by Category',
+                        data: categoryData.map(item => item.total_amount),
+                        backgroundColor: '#36A2EB',
+                        borderColor: '#36A2EB',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return 'R' + value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Analytics trend chart
+            const analyticsTrendCtx = document.getElementById('analytics-trend-chart').getContext('2d');
+            new Chart(analyticsTrendCtx, {
+                type: 'bar',
+                data: {
+                    labels: monthlyData.map(item => item.month),
+                    datasets: [{
+                        label: 'Monthly Spending',
+                        data: monthlyData.map(item => item.total),
+                        backgroundColor: '#FF6384',
+                        borderColor: '#FF6384',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return 'R' + value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Weekly chart (sample data)
+            const weeklyCtx = document.getElementById('weekly-chart').getContext('2d');
+            new Chart(weeklyCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                    datasets: [{
+                        label: 'Weekly Spending',
+                        data: [1200, 1900, 1500, 2100],
+                        borderColor: '#4BC0C0',
+                        backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return 'R' + value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Budget chart (sample data)
+            const budgetCtx = document.getElementById('budget-chart').getContext('2d');
+            new Chart(budgetCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Spent', 'Remaining'],
+                    datasets: [{
+                        data: [3200, 1800],
+                        backgroundColor: ['#FF6384', '#36A2EB'],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    return `${label}: R${value.toFixed(2)}`;
                                 }
                             }
                         }
@@ -1236,6 +1683,89 @@
                 const dateB = new Date(b.month);
                 return dateA - dateB;
             });
+        }
+
+        // Open chart modal
+        function openChartModal(chartType) {
+            const modal = document.getElementById('chart-modal');
+            const modalChartCtx = document.getElementById('modal-chart').getContext('2d');
+            
+            // Destroy existing modal chart if it exists
+            if (modalChart) {
+                modalChart.destroy();
+            }
+            
+            // Create the modal chart based on type
+            if (chartType === 'category') {
+                modalChart = new Chart(modalChartCtx, {
+                    type: 'doughnut',
+                    data: categoryChart.data,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                            },
+                            title: {
+                                display: true,
+                                text: 'Spending by Category',
+                                font: {
+                                    size: 18
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = context.raw || 0;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = Math.round((value / total) * 100);
+                                        return `${label}: R${value.toFixed(2)} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } else if (chartType === 'trend') {
+                modalChart = new Chart(modalChartCtx, {
+                    type: 'line',
+                    data: trendChart.data,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Monthly Spending Trend',
+                                font: {
+                                    size: 18
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return 'R' + value;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Show the modal
+            modal.classList.add('active');
+        }
+
+        // Close chart modal
+        function closeChartModal() {
+            const modal = document.getElementById('chart-modal');
+            modal.classList.remove('active');
         }
 
         // Delete expense
